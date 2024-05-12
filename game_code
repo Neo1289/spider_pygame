@@ -1,0 +1,242 @@
+import pygame
+import random
+import sys
+from imported_elements import bonus_fruit_image,BonusFruit,BouncingElement,bonus_stage
+
+pygame.init()
+
+# Constants defining screen dimensions, rectangle dimensions, and next spawn time
+SCREEN_WIDTH = 500
+SCREEN_HEIGHT = 500
+RECT_WIDTH = 1
+RECT_HEIGHT = 1
+NEXT_SPAWN_TIME = 10000
+timer_duration = 120
+
+## Bar constants
+BAR_WIDTH = 80
+BAR_HEIGHT = 10
+BAR_SPEED = 3
+BAR_SPAWN_TIME = 5000
+BAR_LIST = []
+BAR_COUNT = 10
+
+# Loading images for the game
+background = pygame.image.load('woods.png')
+image = pygame.image.load('spider.png')
+fruit_image = pygame.image.load('strawberry.png')
+monster_image = pygame.image.load('standing.png')
+monster_two_image = pygame.image.load('monster_two.png')
+bonus_fruit_image = bonus_fruit_image
+win = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+# Spider class representing the player-controlled character
+class Spider:
+    def __init__(self, x, y, width, height, vel):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.vel = vel
+        self.image = image
+
+# Fruit class representing the target objects for the spider
+class Fruit:
+    def __init__(self,x,y,width,height):
+        self.x, self.y = self.random()
+        self.height=height
+        self.width=width
+
+    def random(self):
+        # Function to generate random coordinates for the fruit
+        return random.randint(10, 480), random.randint(10, 480)
+
+#monster class
+class Monster:
+    def __init__(self,x,y,width,height,speed):
+        self.x, self.y = self.random()
+        self.height = height
+        self.width = width
+        self.speed = speed
+    def random(self):
+        # Function to generate random coordinates for the monster
+        return random.randint(15, 470), random.randint(6, 470)
+
+class Bar:
+    def __init__(self):
+        self.width = BAR_WIDTH
+        self.height = BAR_HEIGHT
+        self.x = random.randint(0, SCREEN_WIDTH - self.width)
+        self.y = random.randint(0, SCREEN_HEIGHT - self.height)
+        self.spawn_time = pygame.time.get_ticks()
+
+    def draw(self, win):
+        pygame.draw.rect(win,(150, 75, 0), (self.x, self.y, self.width, self.height))
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def update(self):
+        # Check if it's time to respawn the bar
+        if pygame.time.get_ticks() - self.spawn_time >= BAR_SPAWN_TIME:
+            self.respawn()
+
+    def respawn(self):
+        self.x = random.randint(0, SCREEN_WIDTH - self.width)
+        self.y = random.randint(0, SCREEN_HEIGHT - self.height)
+        self.spawn_time = pygame.time.get_ticks()
+
+# Main game function
+def main():
+    SCREEN_WIDTH, SCREEN_HEIGHT = pygame.display.get_surface().get_size()
+    pygame.display.set_caption("Test Game")
+    clock = pygame.time.Clock()
+    counter = 0
+    stage = False
+    bars = []
+    num_bars = 3
+    for _ in range(num_bars):
+        bars.append(Bar())
+    #instances of the class objects
+
+    spider = Spider(20, 20,image.get_height(), image.get_width(),2)
+    fruit = Fruit(15,15, fruit_image.get_height(),fruit_image.get_width())
+    bonus_fruit = BonusFruit(10,10,bonus_fruit_image.get_height(),bonus_fruit_image.get_width())
+    monster = Monster(5,5, monster_image.get_height(),monster_image.get_width(),1)
+    monster_two = Monster(12,5, monster_two_image.get_height(),monster_two_image.get_width(),2)
+    bouncing_element = BouncingElement(15,15,5,1,SCREEN_WIDTH, SCREEN_HEIGHT)
+    start_time = pygame.time.get_ticks()
+    bar = Bar()
+    #game loop
+    while True:
+        win.fill((0, 0, 0))
+        current_time = pygame.time.get_ticks()
+        elapsed_time = (current_time - start_time) // 1000
+        remaining_time = max(timer_duration - elapsed_time, 0)  # Ensure remaining time is non-negative
+        #background instances
+        if stage == False:
+            win.blit(background, (0, 0))
+        elif stage == True:
+            win.blit(bonus_stage,(0,0))
+
+        #exit the game and pressing keys
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+        keys = pygame.key.get_pressed()
+
+        #spider
+        spider_rect = pygame.Rect(spider.x, spider.y, spider.width, spider.height)
+        win.blit(image, (spider.x, spider.y))
+
+        #fruit
+        fruit_rect = pygame.Rect(fruit.x,fruit.y, fruit.width, fruit.height)
+        win.blit(fruit_image, (fruit.x, fruit.y))
+        if spider_rect.colliderect(fruit_rect):
+            counter +=1 + stage
+            fruit.x, fruit.y = fruit.random()
+            if stage == False:
+                monster.x, monster.y = monster.random()
+                monster_two.x,monster_two.y = monster_two.random()
+            if stage == True:
+                bars.append(Bar())
+
+        ###FIRST STAGE
+        if stage == False:
+            #bouncing element
+            bouncing_rect = pygame.Rect(bouncing_element.element_x, bouncing_element.element_y,
+                                        bouncing_element.element_width, bouncing_element.element_height)
+            pygame.draw.rect(win, (150, 50, 20), bouncing_rect)
+            bouncing_element.element_y_velocity += bouncing_element.gravity
+            bouncing_element.element_y += bouncing_element.element_y_velocity
+            if bouncing_element.element_y < 0:
+                bouncing_element.element_y = 0
+                bouncing_element.element_y_velocity = abs(bouncing_element.element_y_velocity)  # Reverse velocity at the top
+            elif bouncing_element.element_y > SCREEN_HEIGHT - bouncing_element.element_height:
+                bouncing_element.element_y = SCREEN_HEIGHT - bouncing_element.element_height
+                bouncing_element.element_y_velocity = -abs(bouncing_element.element_y_velocity)
+            if spider_rect.colliderect(bouncing_rect):
+                counter = 0
+                stage = False
+
+            #bar element while stage == False
+            bar.update()
+            bar_rect = bar.draw(win)
+            if spider_rect.colliderect(bar_rect):
+                spider.vel = 0
+                stage = False
+            elif not spider_rect.colliderect(bar_rect):
+                spider.vel = 2
+
+            #monster
+            monster_rect = pygame.Rect(monster.x,monster.y, monster.width, monster.height)
+            monster.x+=monster.speed
+            if monster.x < 0 or monster.x + monster.width > SCREEN_WIDTH:
+                monster.speed = -monster.speed
+            win.blit(monster_image, (monster.x, monster.y))
+            if spider_rect.colliderect(monster_rect):
+                counter = 0
+                stage = False
+
+            #monster two
+            if counter < 3:
+                pass
+            elif counter > 3 :
+                monster_two_rect = pygame.Rect(monster_two.x, monster_two.y, RECT_WIDTH, RECT_HEIGHT)
+                win.blit(monster_two_image, (monster_two.x, monster_two.y))
+                monster_two.x += monster_two.speed
+                if monster_two.x < 0 or monster_two.x + monster_two.width > SCREEN_WIDTH:
+                    monster_two.speed = -monster_two.speed
+                if spider_rect.colliderect(monster_two_rect):
+                    counter = 0
+                    stage = False
+
+            if counter % 5 == 0 and counter != 0:
+                bonus_rect = pygame.Rect(bonus_fruit.x, bonus_fruit.y, bonus_fruit.width, bonus_fruit.height)
+                win.blit(bonus_fruit_image, (bonus_fruit.x, bonus_fruit.y))
+                if spider_rect.colliderect(bonus_rect):
+                    counter += 2 + stage
+                    fruit.x, fruit.y = fruit.random()
+                    bonus_fruit.x, bonus_fruit.y = bonus_fruit.random()
+                    monster.x, monster.y = monster.random()
+                    monster_two.x, monster_two.y = monster_two.random()
+                    stage = True
+
+        ###SECOND STAGE
+        if stage == True:
+           for bar in bars:
+                bar.update()
+                bar_rect = bar.draw(win)
+           if spider_rect.colliderect(bar_rect):
+                spider.vel = 0
+                stage = False
+           elif not spider_rect.colliderect(bar_rect):
+                spider.vel = 2
+
+        # Handling user input for spider movement
+        if keys[pygame.K_LEFT] and spider.x > spider.vel:
+            spider.x -= spider.vel
+        if keys[pygame.K_RIGHT] and spider.x < SCREEN_WIDTH - spider.width - spider.vel:
+            spider.x += spider.vel
+        if keys[pygame.K_UP] and spider.y > spider.vel:
+            spider.y -= spider.vel
+        if keys[pygame.K_DOWN] and spider.y < SCREEN_HEIGHT - spider.height - spider.vel:
+            spider.y += spider.vel
+
+        pygame.display.set_caption( f"Test Game - Collisions: {counter} - Time Remaining: {remaining_time} seconds")
+
+        if remaining_time == 0:
+            message = 'Game Over! you did ' + str(counter) + ' points'
+            font = pygame.font.Font(None, 34)
+            text = font.render(message, True, (5, 100, 255))
+            win.blit(text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2))
+            pygame.display.flip()
+            pygame.time.delay(5000)  # Display the message for 5 seconds
+            pygame.quit()
+            sys.exit()
+
+        pygame.display.update()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    main()
+
