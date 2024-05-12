@@ -1,0 +1,26 @@
+import pygame
+import random
+
+######## element 1
+bonus_fruit_image = pygame.image.load('bonus_fruit_cherry.png')
+bonus_stage = pygame.image.load('bg.jpg')
+
+######## element 2
+
+class BonusFruit():
+    def __init__(self,x,y,width,height):
+        self.x, self.y = self.random()
+        self.height=height
+        self.width=width
+    def random(self):
+        return random.randint(10, 480), random.randint(10, 480)
+
+######## element 3
+
+class BouncingElement():
+    def __init__(self,element_width,element_height,element_y_velocity,gravity,SCREEN_WIDTH,SCREEN_HEIGHT):
+        self.element_width  = element_width
+        self.element_height = element_height
+        self.element_x, self.element_y = SCREEN_WIDTH // 2 - self.element_width // 2, SCREEN_HEIGHT // 2 - self.element_height // 2
+        self.element_y_velocity = element_y_velocity
+        self.gravity = gravity
